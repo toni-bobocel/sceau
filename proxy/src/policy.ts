@@ -25,7 +25,7 @@ export interface Rule {
   name: string
   match: string
   if?: Condition[]
-  then: Verdict
+  action: Verdict
 }
 
 export interface Policy {
@@ -52,18 +52,20 @@ const OPS = new Set(['arg', 'eq', 'ne', 'gt', 'gte', 'lt', 'lte', 'in', 'not_in'
 
 /** Fails loudly on anything it does not understand: a typo in a firewall rule must not become "allow". */
 export function checkPolicy(raw: { rules?: unknown; default?: unknown }): Policy {
-  const rules = (raw.rules ?? []) as Rule[]
-  if (!Array.isArray(rules)) throw new Error('rules: expected a list')
-  for (const [i, r] of rules.entries()) {
+  // written `then:` in YAML, which reads well there and nowhere else: a JS object with a `then` looks like a promise
+  const written = (raw.rules ?? []) as (Omit<Rule, 'action'> & { then: Verdict })[]
+  if (!Array.isArray(written)) throw new Error('rules: expected a list')
+  const rules: Rule[] = []
+  for (const [i, r] of written.entries()) {
     const where = `rules[${i}]${r?.name ? ` (${r.name})` : ''}`
     if (!r || typeof r.match !== 'string') throw new Error(`${where}: "match" is required, e.g. "payments/refund" or "*/send_email"`)
     if (!VERDICTS.has(r.then)) throw new Error(`${where}: "then" must be allow, deny or hold`)
-    r.name ??= `${r.then} ${r.match}`
     for (const c of r.if ?? []) {
       const unknown = Object.keys(c).filter(k => !OPS.has(k))
       if (unknown.length) throw new Error(`${where}: unknown condition ${unknown.join(', ')}`)
       if (c.matches) new RegExp(c.matches)
     }
+    rules.push({ name: r.name ?? `${r.then} ${r.match}`, match: r.match, if: r.if, action: r.then })
   }
   const d = (raw.default ?? {}) as Partial<Policy['default']>
   const def = { read: d.read ?? 'allow', write: d.write ?? 'hold' }
@@ -127,7 +129,7 @@ function holds(c: Condition, call: Call): boolean {
 
 export function decide(policy: Policy, call: Call): Decision {
   for (const r of policy.rules) {
-    if (matches(r.match, call.server, call.tool) && (r.if ?? []).every(c => holds(c, call))) return { verdict: r.then, rule: r.name }
+    if (matches(r.match, call.server, call.tool) && (r.if ?? []).every(c => holds(c, call))) return { verdict: r.action, rule: r.name }
   }
   return { verdict: call.access === 'read' ? policy.default.read : policy.default.write }
 }
