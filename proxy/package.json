@@ -1,0 +1,25 @@
+{
+  "name": "@sceau/proxy",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "sceau": "./src/cli.ts"
+  },
+  "scripts": {
+    "serve": "node src/cli.ts serve",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.1.11",
+    "hono": "^4.13.22",
+    "yaml": "^2.9.1"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "@types/node": "^26.6.6",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.2",
+    "zod": "^4.6.7"
+  }
+}
