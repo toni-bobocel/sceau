@@ -1,0 +1,63 @@
+# The demo's policy: a support agent with the company's CRM, payments, mail
+# relay and shared drive. Every value can come from the environment.
+
+listen: ${SCEAU_LISTEN:-127.0.0.1:7325}
+data: ${SCEAU_DATA:-../data}
+public_url: ${SCEAU_PUBLIC_URL:-http://localhost:7325}
+
+servers:
+  crm: { url: "${DEMO_TOOLS:-http://127.0.0.1:8400}/crm" }
+  payments: { url: "${DEMO_TOOLS:-http://127.0.0.1:8400}/payments" }
+  mail: { url: "${DEMO_TOOLS:-http://127.0.0.1:8400}/mail" }
+  files: # stdio, reached through `sceau wrap --server files`
+
+approvals:
+  timeout: 10m
+  slack:
+    bot_token: ${SLACK_BOT_TOKEN}
+    channel: ${SLACK_CHANNEL}
+    signing_secret: ${SLACK_SIGNING_SECRET}
+    webhook_url: ${SLACK_WEBHOOK_URL}
+  webhook: ${APPROVALS_WEBHOOK}
+
+redact: [iban, card, api_key, email, phone]
+injection: block
+
+rules:
+  - name: nothing is ever deleted
+    match: crm/query
+    if: [{ sql: [delete, drop, truncate, alter] }]
+    then: deny
+
+  - name: the agent reads the database freely
+    match: crm/query
+    if: [{ sql_only: [select] }]
+    then: allow
+
+  - name: refunds above 200 EUR wait for finance
+    match: payments/refund
+    if: [{ arg: amount, gt: 200 }]
+    then: hold
+
+  - name: small refunds go through
+    match: payments/refund
+    then: allow
+
+  - name: bank details never leave by mail
+    match: mail/send_email
+    if: [{ carries: [iban, card] }]
+    then: deny
+
+  # the address came out of our own systems as a token, so it is a customer, not a stranger
+  - name: mail to a customer the CRM gave us
+    match: mail/send_email
+    if: [{ carries: [email] }]
+    then: allow
+
+  - name: any other mail waits
+    match: mail/send_email
+    then: hold
+
+default:
+  read: allow
+  write: hold

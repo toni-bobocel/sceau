@@ -8,6 +8,8 @@
   },
   "scripts": {
     "serve": "node proxy/src/cli.ts serve",
+    "demo": "node demo/src/run.ts",
+    "e2e": "node demo/src/e2e.ts",
     "dev": "pnpm --filter web dev",
     "build": "pnpm --filter web build",
     "test": "pnpm -r test",
