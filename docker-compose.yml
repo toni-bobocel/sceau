@@ -1,0 +1,33 @@
+# The demo: three tool servers and Sceau in front of them.
+#   docker compose up --build    then open http://localhost:7325
+#   pnpm e2e                     plays the support ticket against it
+
+services:
+  sceau:
+    build: .
+    ports: ["7325:7325"]
+    environment:
+      SCEAU_ADMIN_PASSWORD: ${SCEAU_ADMIN_PASSWORD:-seal-it-yourself}
+      SCEAU_RELAY_TOKEN: ${SCEAU_RELAY_TOKEN:-demo-relay-token}
+      SCEAU_PUBLIC_URL: ${SCEAU_PUBLIC_URL:-http://localhost:7325}
+      DEMO_TOOLS: http://tools:8400
+      SLACK_BOT_TOKEN: ${SLACK_BOT_TOKEN:-}
+      SLACK_CHANNEL: ${SLACK_CHANNEL:-}
+      SLACK_SIGNING_SECRET: ${SLACK_SIGNING_SECRET:-}
+      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
+    volumes:
+      - ./deploy/demo.yaml:/etc/sceau/sceau.yaml:ro
+      - sceau-data:/var/lib/sceau
+    depends_on: [tools]
+
+  tools:
+    build: .
+    entrypoint: ["node", "/app/demo/src/servers.ts"]
+    environment:
+      HOST: 0.0.0.0
+    # the image's health check is the proxy's
+    healthcheck:
+      disable: true
+
+volumes:
+  sceau-data:

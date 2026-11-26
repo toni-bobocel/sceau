@@ -1,0 +1,36 @@
+# The configuration the image starts with. Mount your own over it:
+#   docker run -v ./sceau.yaml:/etc/sceau/sceau.yaml -v sceau:/var/lib/sceau -p 7325:7325 ghcr.io/toni-bobocel/sceau
+
+listen: ${SCEAU_LISTEN:-127.0.0.1:7325}
+# the key, the ledger and the approvers live here: back it up, and keep it
+data: ${SCEAU_DATA:-./data}
+# where approvers reach the console, used in Slack messages
+public_url: ${SCEAU_PUBLIC_URL:-http://localhost:7325}
+# wrappers on other hosts present this; without it only localhost may relay
+relay_token: ${SCEAU_RELAY_TOKEN}
+
+servers:
+  # crm: { url: http://crm.internal:8000/mcp }
+  # payments:
+  #   url: https://payments.internal/mcp
+  #   headers: { authorization: "Bearer ${PAYMENTS_MCP_TOKEN}" }
+  # files:   # a stdio server, started through `sceau wrap --server files -- ...`
+
+approvals:
+  timeout: 10m
+  # slack:
+  #   bot_token: ${SLACK_BOT_TOKEN}           # chat:write; buttons need the two lines below
+  #   channel: ${SLACK_CHANNEL}
+  #   signing_secret: ${SLACK_SIGNING_SECRET} # interactivity URL: <public_url>/slack/actions
+  #   webhook_url: ${SLACK_WEBHOOK_URL}       # or just a link, through an incoming webhook
+  # webhook: https://ops.internal/hooks/sceau # every hold, as JSON
+
+redact: [iban, card, api_key, email, phone]
+injection: block # block | strip | flag
+
+rules: []
+
+# with no rule matching: tools that declare themselves read-only run, the rest wait
+default:
+  read: allow
+  write: hold
