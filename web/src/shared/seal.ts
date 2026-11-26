@@ -1,142 +1,216 @@
 import { gsap, MOTION } from './motion'
 
-// The seal: graduated rings, each carrying one brass index. At rest every ring
-// turns at its own pace; `alignment` brings all the indices onto the vertical
-// axis, where the seal can close.
+// The seal, drawn small and blown up as hard square pixels. `cells` is how many
+// pixels span its width: few and it is a blocky stamp, many and the engraving
+// reads. Rings turn at their own pace until `alignment` brings every wax index
+// onto the axis at the top, where the seal can close.
 
-const NS = 'http://www.w3.org/2000/svg'
-const C = 500
-
-function el<K extends keyof SVGElementTagNameMap>(name: K, attrs: Record<string, string | number>, parent?: Element) {
-  const e = document.createElementNS(NS, name)
-  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, String(v))
-  parent?.append(e)
-  return e
-}
-
-const polar = (r: number, deg: number) => {
-  const a = ((deg - 90) * Math.PI) / 180
-  return [C + r * Math.cos(a), C + r * Math.sin(a)] as const
-}
-
-function ticks(g: SVGGElement, r: number, count: number, len: (i: number) => number, cls = 'seal__tick') {
-  let d = ''
-  for (let i = 0; i < count; i++) {
-    const deg = (360 / count) * i
-    const [x1, y1] = polar(r, deg)
-    const [x2, y2] = polar(r - len(i), deg)
-    d += `M${x1.toFixed(1)} ${y1.toFixed(1)}L${x2.toFixed(1)} ${y2.toFixed(1)}`
-  }
-  el('path', { d, class: cls }, g)
-}
-
-function index(g: SVGGElement, r: number) {
-  const [x, y] = polar(r, 0)
-  el('path', { d: `M${x} ${y + 2}l-7 -14h14z`, class: 'seal__index' }, g)
-}
+const INK = '#1b1b1a'
+const WAX = '#ef4a1b'
 
 export interface Seal {
-  svg: SVGSVGElement
-  core: SVGGElement
-  fill: SVGCircleElement
-  flash: SVGCircleElement
-  /** 0: the rings turn freely; 1: every index sits on the axis */
+  canvas: HTMLCanvasElement
   alignment: { value: number }
+  cells: { value: number }
+  /** 0..1: wax floods the core */
+  fill: { value: number }
   dispose: () => void
 }
 
-export function buildSeal(host: HTMLElement, opts: { words?: string } = {}): Seal {
-  const svg = el('svg', { viewBox: '0 0 1000 1000', class: 'seal', 'aria-hidden': 'true' })
-  const rings: { g: SVGGElement; base: number; speed: number }[] = []
-  const ring = (speed: number) => {
-    const g = el('g', {}, svg)
-    rings.push({ g, base: 40 + Math.random() * 280, speed })
-    return g
-  }
+export function buildSeal(host: HTMLElement, opts: { words?: string; cells?: number } = {}): Seal {
+  const canvas = document.createElement('canvas')
+  canvas.className = 'seal'
+  canvas.setAttribute('aria-hidden', 'true')
+  host.append(canvas)
+  const ctx = canvas.getContext('2d')!
+  const src = document.createElement('canvas')
+  const sctx = src.getContext('2d', { willReadFrequently: true })!
 
-  // the fixed axis everything aligns on
-  el('path', { d: 'M500 -22V8', class: 'seal__axis' }, svg)
-
-  const a = ring(1.2)
-  el('circle', { cx: C, cy: C, r: 488, class: 'seal__line' }, a)
-  ticks(a, 488, 180, i => (i % 15 === 0 ? 22 : i % 5 === 0 ? 13 : 6))
-  index(a, 476)
-
-  const b = ring(-2.1)
-  el('circle', { cx: C, cy: C, r: 428, class: 'seal__line seal__line--faint' }, b)
-  for (let i = 0; i < 16; i++) {
-    const [x, y] = polar(402, i * 22.5)
-    const t = el('text', { x, y, class: 'seal__hex', 'text-anchor': 'middle', 'dominant-baseline': 'central', transform: `rotate(${i * 22.5} ${x} ${y})` }, b)
-    t.textContent = '0123456789abcdef'[i]!
-  }
-  ticks(b, 428, 64, () => 5)
-  index(b, 420)
-
-  const c = ring(3.4)
-  el('circle', { cx: C, cy: C, r: 368, class: 'seal__line seal__line--dash' }, c)
-  for (const deg of [45, 135, 225, 315]) {
-    const [x, y] = polar(368, deg)
-    el('rect', { x: x - 4, y: y - 4, width: 8, height: 8, class: 'seal__stud', transform: `rotate(${deg} ${x} ${y})` }, c)
-  }
-  index(c, 360)
-
-  const d = ring(-4.6)
-  for (const [from, to] of [[18, 102], [138, 214], [250, 334]] as const) {
-    const [x1, y1] = polar(312, from)
-    const [x2, y2] = polar(312, to)
-    el('path', { d: `M${x1} ${y1}A312 312 0 0 1 ${x2} ${y2}`, class: 'seal__line seal__line--strong' }, d)
-    for (const deg of [from, to]) {
-      const [p1, q1] = polar(326, deg)
-      const [p2, q2] = polar(298, deg)
-      el('path', { d: `M${p1} ${q1}L${p2} ${q2}`, class: 'seal__line seal__line--strong' }, d)
-    }
-  }
-  index(d, 300)
-
-  const e = ring(6.2)
-  const pathId = `seal-words-${Math.random().toString(36).slice(2, 7)}`
-  el('path', { id: pathId, d: `M${C} ${C - 252}a252 252 0 1 1 -0.1 0`, fill: 'none' }, e)
-  const words = el('text', { class: 'seal__words' }, e)
-  // as many whole repeats as the ring holds, then spaced to close the circle exactly
-  const phrase = opts.words ?? 'SHA-256 · ED25519 · MODEL CONTEXT PROTOCOL · HUMAN OVERSIGHT · '
-  const around = 2 * Math.PI * 252 - 4
-  const tp = el('textPath', { href: `#${pathId}`, startOffset: '0', textLength: around.toFixed(0), lengthAdjust: 'spacing' }, words)
-  tp.textContent = phrase.repeat(Math.max(1, Math.floor(around / (phrase.length * 15.5))))
-  ticks(e, 230, 120, i => (i % 10 === 0 ? 9 : 4))
-  index(e, 222)
-
-  const core = el('g', { class: 'seal__core' }, svg)
-  el('circle', { cx: C, cy: C, r: 200, class: 'seal__line seal__line--strong' }, core)
-  const fill = el('circle', { cx: C, cy: C, r: 196, class: 'seal__fill' }, core)
-  el('path', { d: 'M500 470V530M470 500H530', class: 'seal__cross' }, core)
-  const mono = el('text', { x: C, y: C + 6, class: 'seal__mono', 'text-anchor': 'middle', 'dominant-baseline': 'central' }, core)
-  mono.textContent = 'S'
-  const flash = el('circle', { cx: C, cy: C, r: 196, class: 'seal__flash' }, svg)
-
-  host.append(svg)
-
+  const words = opts.words ?? 'SHA-256 · ED25519 · MODEL CONTEXT PROTOCOL · HUMAN OVERSIGHT · '
+  const rings = [1.2, -2.1, 3.4, -4.6, 6.2].map(speed => ({ base: 40 + Math.random() * 280, speed }))
   const alignment = { value: 0 }
+  const cells = { value: opts.cells ?? 56 }
+  const fill = { value: 0 }
+
+  // drawn in a 1000-unit square; strokes never thinner than one pixel of the grid
+  function paint(n: number, angles: number[]) {
+    src.width = src.height = n
+    const s = sctx
+    s.setTransform(n / 1000, 0, 0, n / 1000, 0, 0)
+    const px = 1000 / n
+    const line = (w: number) => (s.lineWidth = Math.max(w, px * 0.85))
+    s.strokeStyle = s.fillStyle = INK
+
+    const turn = (deg: number, draw: () => void) => {
+      s.save()
+      s.translate(500, 500)
+      s.rotate((deg * Math.PI) / 180)
+      draw()
+      s.restore()
+    }
+    const circle = (r: number, w: number) => {
+      line(w)
+      s.beginPath()
+      s.arc(0, 0, r, 0, Math.PI * 2)
+      s.stroke()
+    }
+    const ticks = (r: number, count: number, len: (i: number) => number, w = 2.4) => {
+      line(w)
+      s.beginPath()
+      for (let i = 0; i < count; i++) {
+        const a = (i / count) * Math.PI * 2
+        s.moveTo(Math.sin(a) * r, -Math.cos(a) * r)
+        s.lineTo(Math.sin(a) * (r - len(i)), -Math.cos(a) * (r - len(i)))
+      }
+      s.stroke()
+    }
+    const index = (r: number) => {
+      s.fillStyle = WAX
+      s.beginPath()
+      const h = Math.max(30, px * 1.6)
+      s.moveTo(0, -r + h * 0.15)
+      s.lineTo(-h * 0.55, -r - h)
+      s.lineTo(h * 0.55, -r - h)
+      s.fill()
+      s.fillStyle = INK
+    }
+
+    turn(angles[0]!, () => {
+      circle(488, 3)
+      ticks(488, 120, i => (i % 10 === 0 ? 34 : i % 5 === 0 ? 20 : 10))
+      index(470)
+    })
+    turn(angles[1]!, () => {
+      circle(420, 2.4)
+      s.font = '500 30px monospace'
+      s.textAlign = 'center'
+      s.textBaseline = 'middle'
+      for (let i = 0; i < 16; i++) {
+        s.save()
+        s.rotate((i / 16) * Math.PI * 2)
+        s.fillText('0123456789abcdef'[i]!, 0, -392)
+        s.restore()
+      }
+      index(410)
+    })
+    turn(angles[2]!, () => {
+      line(3)
+      s.setLineDash([4, 22])
+      s.beginPath()
+      s.arc(0, 0, 356, 0, Math.PI * 2)
+      s.stroke()
+      s.setLineDash([])
+      for (let i = 0; i < 4; i++) {
+        s.save()
+        s.rotate(Math.PI / 4 + (i * Math.PI) / 2)
+        s.fillRect(-10, -366, 20, 20)
+        s.restore()
+      }
+      index(346)
+    })
+    turn(angles[3]!, () => {
+      line(14)
+      for (const [from, to] of [[18, 102], [138, 214], [250, 334]] as const) {
+        s.beginPath()
+        s.arc(0, 0, 300, ((from - 90) * Math.PI) / 180, ((to - 90) * Math.PI) / 180)
+        s.stroke()
+      }
+      index(286)
+    })
+    turn(angles[4]!, () => {
+      s.font = '600 28px monospace'
+      s.textAlign = 'center'
+      s.textBaseline = 'middle'
+      const chars = [...words.repeat(2)]
+      const step = (Math.PI * 2) / chars.length
+      chars.forEach((c, i) => {
+        s.save()
+        s.rotate(i * step)
+        s.fillText(c, 0, -244)
+        s.restore()
+      })
+      ticks(216, 90, i => (i % 9 === 0 ? 14 : 6), 2)
+      index(206)
+    })
+
+    // the core does not turn
+    s.save()
+    s.translate(500, 500)
+    circle(180, 6)
+    if (fill.value > 0) {
+      s.fillStyle = WAX
+      s.beginPath()
+      s.arc(0, 0, 172 * fill.value, 0, Math.PI * 2)
+      s.fill()
+      s.globalCompositeOperation = 'destination-out'
+      s.globalAlpha = fill.value
+      s.font = '800 250px "Archivo Variable", "Arial Black", sans-serif'
+      s.textAlign = 'center'
+      s.textBaseline = 'middle'
+      s.fillText('S', 0, 14)
+      s.globalAlpha = 1
+      s.globalCompositeOperation = 'source-over'
+    } else {
+      line(4)
+      s.beginPath()
+      s.moveTo(0, -36)
+      s.lineTo(0, 36)
+      s.moveTo(-36, 0)
+      s.lineTo(36, 0)
+      s.stroke()
+    }
+    s.restore()
+
+    // the fixed axis everything lines up under
+    s.fillStyle = WAX
+    s.fillRect(500 - Math.max(5, px * 0.5), 0, Math.max(10, px), 20)
+  }
+
+  let size = 0
+  const resize = () => {
+    size = host.clientWidth
+    const dpr = Math.min(devicePixelRatio, 2)
+    canvas.width = canvas.height = Math.round(size * dpr)
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+  }
+  const ro = new ResizeObserver(resize)
+  ro.observe(host)
+  resize()
+
   let t = 0
   let visible = true
   const io = new IntersectionObserver(([en]) => (visible = !!en?.isIntersecting))
   io.observe(host)
+
   const tick = (_: number, dt: number) => {
-    if (!visible) return
+    if (!visible || !size) return
     // slower still as it aligns: the mechanism settles rather than stops
     t += (dt / 1000) * (1 - alignment.value) * (MOTION ? 1 : 0)
-    for (const r of rings) {
-      const angle = ((r.base + t * r.speed) % 360) * (1 - alignment.value)
-      r.g.setAttribute('transform', `rotate(${angle.toFixed(3)} ${C} ${C})`)
+    const angles = rings.map(r => ((r.base + t * r.speed) % 360) * (1 - alignment.value))
+    const n = Math.max(12, Math.round(cells.value))
+    paint(n, angles)
+    const data = sctx.getImageData(0, 0, n, n).data
+    const c = size / n
+    ctx.clearRect(0, 0, size, size)
+    for (let y = 0; y < n; y++) {
+      for (let x = 0; x < n; x++) {
+        const i = (y * n + x) * 4
+        if (data[i + 3]! < 92) continue
+        ctx.fillStyle = data[i]! > 120 && data[i + 1]! < 120 ? WAX : INK
+        // a hair of overlap so neighbouring squares never show a seam
+        ctx.fillRect(Math.floor(x * c), Math.floor(y * c), Math.ceil(c) + 0.5, Math.ceil(c) + 0.5)
+      }
     }
   }
   gsap.ticker.add(tick)
   tick(0, 0)
 
   return {
-    svg, core, fill, flash, alignment,
+    canvas, alignment, cells, fill,
     dispose: () => {
       gsap.ticker.remove(tick)
       io.disconnect()
+      ro.disconnect()
     },
   }
 }
