@@ -97,8 +97,11 @@ export function buildSeal(host: HTMLElement, opts: { words?: string } = {}): Sea
   const pathId = `seal-words-${Math.random().toString(36).slice(2, 7)}`
   el('path', { id: pathId, d: `M${C} ${C - 252}a252 252 0 1 1 -0.1 0`, fill: 'none' }, e)
   const words = el('text', { class: 'seal__words' }, e)
-  const tp = el('textPath', { href: `#${pathId}`, startOffset: '0' }, words)
-  tp.textContent = (opts.words ?? 'SHA-256 · ED25519 · MODEL CONTEXT PROTOCOL · HUMAN OVERSIGHT · ').repeat(2)
+  // as many whole repeats as the ring holds, then spaced to close the circle exactly
+  const phrase = opts.words ?? 'SHA-256 · ED25519 · MODEL CONTEXT PROTOCOL · HUMAN OVERSIGHT · '
+  const around = 2 * Math.PI * 252 - 4
+  const tp = el('textPath', { href: `#${pathId}`, startOffset: '0', textLength: around.toFixed(0), lengthAdjust: 'spacing' }, words)
+  tp.textContent = phrase.repeat(Math.max(1, Math.floor(around / (phrase.length * 15.5))))
   ticks(e, 230, 120, i => (i % 10 === 0 ? 9 : 4))
   index(e, 222)
 
