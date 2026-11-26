@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sceau: a firewall and flight recorder for AI agents</title>
+  <meta name="description" content="Sceau sits between AI agents and the tools they call over MCP. It blocks what they should not do, holds what a person should decide, masks personal data and keeps a signed record an auditor can check.">
+  <meta name="theme-color" content="#0a0b0d">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+</head>
+<body>
+  <header class="top">
+    <a class="top__mark" href="#top" aria-label="Sceau, back to the top">Sceau</a>
+    <nav class="top__nav" aria-label="Sections">
+      <a href="#policy">Policy</a>
+      <a href="#ledger">Ledger</a>
+      <a href="#run">Run it</a>
+      <a href="https://github.com/toni-bobocel/sceau">GitHub</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero" id="top" aria-labelledby="hero-title">
+      <div class="hero__pin">
+        <div class="hero__seal"></div>
+        <div class="hero__wire" aria-hidden="true">
+          <code data-side="l">{"method":"tools/call","params":{"name":"refund","arguments":{"order":88104,"amount":340}}}</code>
+          <code data-side="l">{"method":"tools/call","params":{"name":"query","arguments":{"sql":"delete from orders"}}}</code>
+          <code data-side="l">{"method":"tools/list","id":7}</code>
+          <code data-side="l">{"method":"sampling/createMessage","params":{"maxTokens":400}}</code>
+          <code data-side="r">{"method":"tools/call","params":{"name":"send_email","arguments":{"to":"[EMAIL_2ec3e7fe]"}}}</code>
+          <code data-side="r">{"method":"tools/call","params":{"name":"read_file","arguments":{"path":"invoice-2291.html"}}}</code>
+          <code data-side="r">{"result":{"content":[{"type":"text","text":"[IBAN_7b8c8bfb]"}]}}</code>
+          <code data-side="r">{"method":"initialize","params":{"clientInfo":{"name":"support-agent"}}}</code>
+        </div>
+
+        <div class="hero__copy">
+          <p class="label">A firewall and flight recorder for MCP</p>
+          <h1 id="hero-title"><span>Cryptographic authority</span> <span>over your autonomous agents.</span></h1>
+        </div>
+        <div class="hero__side">
+          <p>Sceau sits between your AI agents and the tools they call. It stops what they should not do, waits for a person when a decision is theirs, and keeps a signed record your client's security team can check on their own.</p>
+          <code class="cmd">docker run -p 7325:7325 ghcr.io/toni-bobocel/sceau</code>
+        </div>
+
+        <div class="hero__sealed" aria-live="polite">
+          <p class="label">Sealed</p>
+          <code class="hero__hash">&nbsp;</code>
+          <p>Every call, the rule that judged it, and the person who signed for it.</p>
+        </div>
+        <p class="hero__cue label" aria-hidden="true">Scroll to seal</p>
+      </div>
+    </section>
+
+    <section class="policy" id="policy" aria-labelledby="policy-title">
+      <div class="head">
+        <p class="label">The policy</p>
+        <h2 id="policy-title">Rules a person can read aloud.</h2>
+        <p>Plain YAML, checked when Sceau starts: a rule it cannot read stops it from starting, it never falls through to allow. The first rule that matches decides. SQL is read for what it would do, so a delete hidden behind a select does not slip past, and an address that came out of your own CRM is told apart from one the agent made up.</p>
+      </div>
+      <div class="policy__grid">
+        <pre class="yaml surface crosses"><span data-rule="delete"><i>- name:</i> nothing is ever deleted
+  <i>match:</i> crm/query
+  <i>if:</i> [{ sql: [delete, drop, truncate] }]
+  <i>then:</i> <b class="deny">deny</b></span>
+<span data-rule="select"><i>- name:</i> the agent reads the database freely
+  <i>match:</i> crm/query
+  <i>if:</i> [{ sql_only: [select] }]
+  <i>then:</i> <b>allow</b></span>
+<span data-rule="refund"><i>- name:</i> refunds above 200 EUR wait for finance
+  <i>match:</i> payments/refund
+  <i>if:</i> [{ arg: amount, gt: 200 }]
+  <i>then:</i> <b class="wait">hold</b></span>
+<span data-rule="iban"><i>- name:</i> bank details never leave by mail
+  <i>match:</i> mail/send_email
+  <i>if:</i> [{ carries: [iban, card] }]
+  <i>then:</i> <b class="deny">deny</b></span></pre>
+        <ol class="feed" aria-label="Calls as the policy sees them">
+          <li data-rule="select"><span class="feed__who">support-agent</span><code>crm/query <em>select id, total_eur from orders</em></code><b>allowed</b></li>
+          <li data-rule="refund"><span class="feed__who">support-agent</span><code>payments/refund <em>{ order: 88104, amount: 340 }</em></code><b class="wait">held</b></li>
+          <li data-rule="delete"><span class="feed__who">support-agent</span><code>crm/query <em>select 1; delete from orders</em></code><b class="deny">blocked</b></li>
+          <li data-rule="iban"><span class="feed__who">finance-copilot</span><code>mail/send_email <em>{ to: accounts@supplier-billing… }</em></code><b class="deny">blocked</b></li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="mask" aria-labelledby="mask-title">
+      <div class="head">
+        <p class="label">Before the model reads it</p>
+        <h2 id="mask-title">The model gets a token.<br>The tool gets the IBAN.</h2>
+        <p>Results are scanned on their way back to the agent. IBANs are checked against their country's length and checksum, cards against Luhn, keys against the shapes the big providers use. Each value becomes a stable token; when the agent hands a token to a tool, Sceau puts the real value back. The table between the two lives in memory and is never written down.</p>
+      </div>
+      <div class="record surface crosses">
+        <p class="record__bar label"><span>crm/get_customer</span><span>result</span></p>
+<pre class="record__body">{
+  "id": "cus_1042",
+  "name": "Claire Martin",
+  "email": "<span class="pii" data-token="[EMAIL_2ec3e7fe]">claire.martin@example.fr</span>",
+  "iban": "<span class="pii" data-token="[IBAN_7b8c8bfb]">FR76 3000 6000 0112 3456 7890 189</span>",
+  "city": "Lyon",
+  "note": "s3 key <span class="pii" data-token="[API_KEY_51d0e8a4]">AKIAIOSFODNN7EXAMPLE</span>",
+  "orders": [88104, 88131]
+}</pre>
+        <p class="record__sig"><span class="label">sha-256</span><code data-engrave>8f1d0b6a5c2e47d9b3a01f6e9c8d7b2a4e5f60718293a4b5c6d7e8f901a2b3c4</code></p>
+      </div>
+      <div class="inject">
+        <p class="label">And what it should never read</p>
+        <p>A supplier's invoice with a comment that says <q>ignore previous instructions</q>, white text in a PDF, Unicode tag characters that render as nothing: tool results that try to steer the model are withheld and recorded with what they said. Tool descriptions are fingerprinted too, so a server that rewrites a tool after you trusted it shows up in the ledger the moment it does.</p>
+      </div>
+    </section>
+
+    <section class="seal-it" aria-labelledby="seal-title">
+      <div class="head">
+        <p class="label">Human in the loop</p>
+        <h2 id="seal-title">Some calls wait for a hand on the seal.</h2>
+        <p>A held call stays open on the agent's side while a person decides, in the console or in Slack. A click is too easy to give by mistake, so sealing is a press held for less than a second. Whoever seals, and when, goes into the record next to the call.</p>
+      </div>
+      <div class="held surface crosses crosses--wax">
+        <div class="held__bar"><span class="held__state label">Held</span><span class="label">refunds above 200 EUR wait for finance</span></div>
+        <dl class="held__facts">
+          <dt>Agent</dt><dd>support-agent 1.4.0, over Streamable HTTP</dd>
+          <dt>Tool</dt><dd>payments/refund</dd>
+          <dt>Arguments</dt><dd><code>{ "order": 88104, "amount": 340, "reason": "charged twice" }</code></dd>
+          <dt>Waiting</dt><dd><code class="held__wait">0:00</code></dd>
+        </dl>
+        <div class="held__actions">
+          <div class="held__hold" data-label="Hold to seal" data-hint="0.8 s, or hold space"></div>
+          <button class="action action--wax held__decline" type="button">Decline</button>
+        </div>
+        <p class="held__log"><code><span class="held__seq">#2291</span> <span class="held__status">approval pending</span> <span class="held__digest"></span></code></p>
+      </div>
+    </section>
+
+    <section class="ledger" id="ledger" aria-labelledby="ledger-title">
+      <div class="head">
+        <p class="label">The black box</p>
+        <h2 id="ledger-title">A record that cannot be quietly edited.</h2>
+        <p>One JSON line per event, written to disk before the call goes on. Each line carries the SHA-256 of its content and of the line before it, and an Ed25519 signature. Change a number, drop an entry, reorder two, and every check after it fails, at the exact line.</p>
+      </div>
+      <div class="ledger__grid">
+        <ol class="chain" aria-label="Four ledger entries">
+          <li><code class="chain__seq">2289</code><span>call</span><code>payments/refund · hold</code><code class="chain__hash">a41c…9e07</code></li>
+          <li><code class="chain__seq">2290</code><span>approval</span><code>sealed by m.durand after 2 min</code><code class="chain__hash">5fe2…b3d1</code></li>
+          <li><code class="chain__seq">2291</code><span>result</span><code>1 iban masked · 48 ms</code><code class="chain__hash">0c7d…41fa</code></li>
+          <li><code class="chain__seq">2292</code><span>call</span><code>crm/query · deny</code><code class="chain__hash">e9b0…7c25</code></li>
+        </ol>
+        <div class="pack">
+          <p class="label">Evidence pack</p>
+          <p>One click in the console exports any range as a zip your client's auditor opens without installing anything: the ledger slice, the public key, the policy in force, a plain report of who decided what, and a manifest signed over all of it.</p>
+          <ul class="pack__files">
+            <li><code>ledger.jsonl</code><span>the entries, as written</span></li>
+            <li><code>manifest.json</code><span>range, first and last hash, a digest per file</span></li>
+            <li><code>manifest.sig</code><span>Ed25519 over the manifest's exact bytes</span></li>
+            <li><code>report.html</code><span>decisions, refusals, masked data, policy</span></li>
+          </ul>
+          <code class="cmd">openssl pkeyutl -verify -pubin -inkey sceau.pub -rawin -in manifest.json -sigfile manifest.sig</code>
+          <p class="pack__law">Built with the EU AI Act in mind: automatic records of events (Article 12) and people able to step in and stop a system (Article 14). Sceau produces the evidence. It does not, on its own, make anyone compliant.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="run" id="run" aria-labelledby="run-title">
+      <div class="head">
+        <p class="label">Run it</p>
+        <h2 id="run-title">One container in front of your tools.</h2>
+        <p>HTTP tool servers go behind <code>/mcp/&lt;name&gt;</code>. Local ones that speak over stdio are started through <code>sceau wrap</code>, which hands every message to the proxy and refuses calls if the proxy is gone. Nothing leaves your network: no account, no telemetry, the key and the ledger stay in one folder you own.</p>
+      </div>
+      <div class="run__grid">
+        <figure class="snippet surface crosses">
+          <figcaption class="label">sceau.yaml</figcaption>
+<pre>servers:
+  crm:      { url: http://crm.internal/mcp }
+  payments: { url: http://payments.internal/mcp }
+  files:    # stdio, through sceau wrap
+
+approvals:
+  timeout: 10m
+  slack: { bot_token: ${SLACK_BOT_TOKEN}, channel: C07FIN }
+
+redact: [iban, card, api_key, email, phone]
+injection: block</pre>
+        </figure>
+        <figure class="snippet surface crosses">
+          <figcaption class="label">An agent's MCP config</figcaption>
+<pre>{
+  "mcpServers": {
+    "crm": { "url": "http://sceau:7325/mcp/crm" },
+    "files": {
+      "command": "sceau",
+      "args": ["wrap", "--server", "files", "--",
+               "npx", "@modelcontextprotocol/server-filesystem", "/srv/share"]
+    }
+  }
+}</pre>
+        </figure>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <span class="top__mark">Sceau</span>
+    <span>MIT licence. Made by Toni Bobocel.</span>
+    <a class="action" href="https://github.com/toni-bobocel/sceau">Source on GitHub</a>
+  </footer>
+
+  <script type="module" src="/src/site/main.ts"></script>
+</body>
+</html>
