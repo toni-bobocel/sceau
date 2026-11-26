@@ -1,0 +1,92 @@
+:root {
+  --obsidian: #0a0b0d;
+  --slate: #121418;
+  --slate-2: #171a1f;
+  --hair: rgb(255 255 255 / 0.08);
+  --hair-2: rgb(255 255 255 / 0.14);
+  --bone: #e9e6df;
+  --mute: #8d8b85;
+  --faint: #55565a;
+  --brass: #c8a96e;
+  --brass-dim: rgb(200 169 110 / 0.18);
+  --wax: #d9381e;
+  --wax-dim: rgb(217 56 30 / 0.16);
+  --serif: 'Instrument Serif', 'Iowan Old Style', Georgia, serif;
+  --sans: 'Instrument Sans Variable', 'Instrument Sans', system-ui, sans-serif;
+  --mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, Consolas, monospace;
+  --edge: clamp(20px, 4vw, 56px);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+* { margin: 0; padding: 0; }
+html { background: var(--obsidian); color-scheme: dark; -webkit-text-size-adjust: 100%; }
+body {
+  font: 400 15px/1.6 var(--sans);
+  color: var(--bone);
+  background: var(--obsidian);
+  -webkit-font-smoothing: antialiased;
+}
+/* mineral grain, like heavy paper or brushed steel: felt more than seen */
+body::before {
+  content: ''; position: fixed; inset: 0; z-index: 100; pointer-events: none; opacity: 0.045;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .9 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+a { color: inherit; text-decoration: none; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+code, pre, kbd, .mono { font-family: var(--mono); font-feature-settings: 'zero' 1; }
+::selection { background: var(--brass); color: var(--obsidian); }
+:focus-visible { outline: 1px solid var(--brass); outline-offset: 3px; }
+
+.label {
+  font: 500 10.5px/1 var(--mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+/* sighting marks at the four corners, as on a drawing or a vault door */
+.crosses { position: relative; }
+.crosses::before {
+  content: ''; position: absolute; inset: -5px; pointer-events: none;
+  --c: var(--hair-2);
+  background:
+    linear-gradient(var(--c), var(--c)) 0 4.5px / 10px 1px no-repeat,
+    linear-gradient(var(--c), var(--c)) 4.5px 0 / 1px 10px no-repeat,
+    linear-gradient(var(--c), var(--c)) 100% 4.5px / 10px 1px no-repeat,
+    linear-gradient(var(--c), var(--c)) calc(100% - 4.5px) 0 / 1px 10px no-repeat,
+    linear-gradient(var(--c), var(--c)) 0 calc(100% - 4.5px) / 10px 1px no-repeat,
+    linear-gradient(var(--c), var(--c)) 4.5px 100% / 1px 10px no-repeat,
+    linear-gradient(var(--c), var(--c)) 100% calc(100% - 4.5px) / 10px 1px no-repeat,
+    linear-gradient(var(--c), var(--c)) calc(100% - 4.5px) 100% / 1px 10px no-repeat;
+}
+.crosses--wax::before { --c: var(--wax); }
+.crosses--brass::before { --c: var(--brass); }
+
+.surface { background: var(--slate); border: 1px solid var(--hair); }
+
+/* text actions, underlined; the one round control is the seal */
+.action {
+  font: 500 11px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase;
+  padding: 6px 0; border-bottom: 1px solid var(--hair-2); color: var(--bone);
+  transition: border-color 0.3s, color 0.3s;
+}
+.action:hover { border-color: var(--bone); }
+.action--wax { color: var(--wax); border-color: var(--wax-dim); }
+.action--wax:hover { border-color: var(--wax); }
+
+/* hold to seal */
+.hold { display: inline-flex; align-items: center; gap: 18px; user-select: none; -webkit-user-select: none; touch-action: none; }
+.hold__dial { position: relative; width: 76px; height: 76px; flex: none; }
+.hold__dial svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.hold__track { fill: none; stroke: var(--hair-2); stroke-width: 1; }
+.hold__fill { fill: none; stroke: var(--brass); stroke-width: 2; stroke-linecap: butt; }
+.hold__core { fill: var(--slate-2); stroke: var(--hair-2); }
+.hold__mark { fill: none; stroke: var(--bone); stroke-width: 1.2; }
+.hold__text { display: grid; gap: 6px; }
+.hold__text b { font: 400 20px/1 var(--serif); }
+.hold__text span { font: 500 10px/1 var(--mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--mute); }
+.hold[aria-disabled='true'] { opacity: 0.4; pointer-events: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .held__state::before { animation: none; }
+}
