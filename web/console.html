@@ -5,14 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Sceau</title>
   <meta name="robots" content="noindex">
-  <meta name="theme-color" content="#0a0b0d">
+  <meta name="theme-color" content="#dcdcd8">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
 </head>
 <body class="app">
   <div class="login" hidden>
     <form class="login__form">
       <div class="login__seal"></div>
-      <h1>Sceau</h1>
+      <h1 class="wide">Sceau</h1>
       <label><span class="label">Name</span><input name="name" autocomplete="username" required></label>
       <label><span class="label">Password</span><input name="password" type="password" autocomplete="current-password" required></label>
       <p class="login__error" role="alert"></p>
@@ -41,7 +41,7 @@
       <section class="view" data-view="holds" aria-labelledby="holds-title">
         <header class="view__head">
           <p class="label">Human oversight</p>
-          <h1 id="holds-title">Held for a decision</h1>
+          <h1 class="wide" id="holds-title">Held for a decision</h1>
         </header>
         <div class="holds"></div>
         <div class="empty" hidden>
@@ -54,7 +54,7 @@
       <section class="view" data-view="map" aria-labelledby="map-title" hidden>
         <header class="view__head">
           <p class="label">Discovery</p>
-          <h1 id="map-title">Agents and their tools</h1>
+          <h1 class="wide" id="map-title">Agents and their tools</h1>
         </header>
         <div class="map">
           <svg class="map__links" aria-hidden="true"></svg>
@@ -68,7 +68,7 @@
         <header class="view__head view__head--tools">
           <div>
             <p class="label">Black box</p>
-            <h1 id="ledger-title">Ledger</h1>
+            <h1 class="wide" id="ledger-title">Ledger</h1>
           </div>
           <form class="export">
             <label><span class="label">From</span><input name="from" inputmode="numeric" placeholder="1"></label>
@@ -83,7 +83,7 @@
       <section class="view" data-view="policy" aria-labelledby="policy-title" hidden>
         <header class="view__head">
           <p class="label">In force</p>
-          <h1 id="policy-title">Policy</h1>
+          <h1 class="wide" id="policy-title">Policy</h1>
         </header>
         <div class="policy">
           <ol class="rules"></ol>
