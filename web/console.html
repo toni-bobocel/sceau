@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sceau</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#0a0b0d">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+</head>
+<body class="app">
+  <div class="login" hidden>
+    <form class="login__form">
+      <div class="login__seal"></div>
+      <h1>Sceau</h1>
+      <label><span class="label">Name</span><input name="name" autocomplete="username" required></label>
+      <label><span class="label">Password</span><input name="password" type="password" autocomplete="current-password" required></label>
+      <p class="login__error" role="alert"></p>
+      <button class="action" type="submit">Sign in</button>
+    </form>
+  </div>
+
+  <div class="shell" hidden>
+    <aside class="rail">
+      <a class="rail__mark" href="#holds">Sceau</a>
+      <nav class="rail__nav" aria-label="Views">
+        <a href="#holds" data-view="holds">Held <b class="rail__count"></b></a>
+        <a href="#map" data-view="map">Agents</a>
+        <a href="#ledger" data-view="ledger">Ledger</a>
+        <a href="#policy" data-view="policy">Policy</a>
+      </nav>
+      <div class="rail__foot">
+        <p class="label">Ledger head</p>
+        <code class="rail__head">—</code>
+        <p class="rail__chain"></p>
+        <p class="rail__user"><span></span> <button class="action" type="button" data-logout>Sign out</button></p>
+      </div>
+    </aside>
+
+    <main class="views">
+      <section class="view" data-view="holds" aria-labelledby="holds-title">
+        <header class="view__head">
+          <p class="label">Human oversight</p>
+          <h1 id="holds-title">Held for a decision</h1>
+        </header>
+        <div class="holds"></div>
+        <div class="empty" hidden>
+          <div class="empty__seal"></div>
+          <p>Nothing is waiting.</p>
+          <p class="label">Held calls appear here the moment an agent makes them</p>
+        </div>
+      </section>
+
+      <section class="view" data-view="map" aria-labelledby="map-title" hidden>
+        <header class="view__head">
+          <p class="label">Discovery</p>
+          <h1 id="map-title">Agents and their tools</h1>
+        </header>
+        <div class="map">
+          <svg class="map__links" aria-hidden="true"></svg>
+          <div class="map__col" data-col="agents"><p class="label">Agents</p><ul></ul></div>
+          <div class="map__col" data-col="servers"><p class="label">Servers</p><ul></ul></div>
+          <div class="map__col" data-col="tools"><p class="label">Tools</p><ul></ul></div>
+        </div>
+      </section>
+
+      <section class="view" data-view="ledger" aria-labelledby="ledger-title" hidden>
+        <header class="view__head view__head--tools">
+          <div>
+            <p class="label">Black box</p>
+            <h1 id="ledger-title">Ledger</h1>
+          </div>
+          <form class="export">
+            <label><span class="label">From</span><input name="from" inputmode="numeric" placeholder="1"></label>
+            <label><span class="label">To</span><input name="to" inputmode="numeric" placeholder="head"></label>
+            <button class="action" type="submit">Export evidence pack</button>
+            <button class="action" type="button" data-verify>Verify chain</button>
+          </form>
+        </header>
+        <ol class="entries"></ol>
+      </section>
+
+      <section class="view" data-view="policy" aria-labelledby="policy-title" hidden>
+        <header class="view__head">
+          <p class="label">In force</p>
+          <h1 id="policy-title">Policy</h1>
+        </header>
+        <div class="policy">
+          <ol class="rules"></ol>
+          <pre class="policy__source surface"></pre>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="/src/console/main.ts"></script>
+</body>
+</html>
